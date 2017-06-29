@@ -1,0 +1,35 @@
+#------------------------------------------------------------
+#        Script MySQL.
+#------------------------------------------------------------
+
+
+#------------------------------------------------------------
+# Table: serre
+#------------------------------------------------------------
+
+CREATE TABLE serre(
+        position_x Int,
+        position_y Int,
+        effectif Int ,
+        Id Int,
+        PRIMARY KEY (position_x,position_y)
+)ENGINE=InnoDB;
+
+
+#------------------------------------------------------------
+# Table: plante
+#------------------------------------------------------------
+
+CREATE TABLE plante(
+        Id         Int NOT NULL ,
+        nom        Char (25) ,
+        url        Char (100) ,
+        seuil_lum  Int ,
+        temp       Int ,
+        humidite   Int ,
+        besoin_eau Int ,
+        maturation Int ,
+        PRIMARY KEY (Id )
+)ENGINE=InnoDB;
+
+ALTER TABLE serre ADD CONSTRAINT FK_serre_Id FOREIGN KEY (Id) REFERENCES plante(Id);

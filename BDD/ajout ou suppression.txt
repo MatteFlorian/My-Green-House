@@ -1,0 +1,30 @@
+-- ajout d'une nouvelle plante dans la table plante
+insert into plante	-- dans l'ordre : (id,nom,url,seuil_lum,temp,humidite,besoin_eau,maturation)
+values (0,'tomates','url.tomates',1,2,3,4,5);
+
+
+
+-- ajout d'une plante dans la serre
+insert into serre	-- dans l'ordre : (position,effectif,id)
+values ('00',30,0);
+
+
+-- suppression plante à la position XX
+delete from serre where position='00';
+
+
+
+
+
+-- exemple d'ajouts dans plante et dans serre
+insert into plante
+values (0,'tomate','http://www.renders-graphiques.fr/image/upload/normal/6605_render_Tomates.png',NULL,23,70,NULL,65);
+
+insert into plante
+values (1,'laitue','https://cdn.pixabay.com/photo/2015/09/14/19/53/nature-940032_960_720.jpg',NULL,19,NULL,NULL,42);
+
+insert into plante
+values (2,'pomme de terre','http://www.agroligne.com/contenu/images/salon_pomme_de_terre.jpg',NULL,17,83,NULL,63);
+
+insert into serre
+values (00,30,0);
