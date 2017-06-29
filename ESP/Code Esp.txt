@@ -1,0 +1,57 @@
+// bibliothèques requises pour le bon fonctionnement de notre DHT11 :
+#include <DHT_U.h>
+
+// Bibliothèque requise pour le fonctionnement de notre ESP8266 en wifi :
+#include <ESP8266WiFi.h>
+
+// bibliothèque requise pour la connexion à notre constellation :
+#include <Constellation.h>
+
+// définition du type de DHT et du pin sur lequel celui-ci est placé dans notre montage :
+DHT_Unified dht(D1, DHT11); // (lecture sur le Pin D1, Nous utilisons un DHT11)
+
+// paramètres wifi et constellation : 
+char ssid[] = "HONOR";
+char password[] = "12345678";
+Constellation<WiFiClient> constellation("192.168.43.245", 8088, "ESP8266", "MyVirtualPackage", "123");
+
+// déclaration de variable locale :
+
+int Luminosite = 0; // en Lux
+
+void setup()
+{  
+  Serial.begin(115200);
+
+ //   Connexion à la wifi :  
+  
+  WiFi.begin(ssid, password);  
+  while (WiFi.status() != WL_CONNECTED) 
+  {
+    delay(500);
+  }
+  return;
+}
+
+void loop() 
+{
+   // récuperation des valeurs sur les capteurs : 
+  
+  Luminosite = analogRead(A0)/2;  // on divise par 2 la valeur captée en lux car nous avons une résistance de 10k Ohms intégrée dans notre capteur
+      dht.begin();
+      sensors_event_t event;
+
+      dht.temperature().getEvent(&event);
+      if (!isnan(event.temperature))
+      {
+      constellation.pushStateObject("Temperature", event.temperature);
+      }      
+      dht.humidity().getEvent(&event);
+      if (!isnan(event.relative_humidity))
+      {
+      constellation.pushStateObject("Humidite", event.relative_humidity);
+      }
+      constellation.pushStateObject("lux", Luminosite);
+
+    delay(2000); // le DHT 11 a besoin de 2 sec entre chaque mesure
+}
