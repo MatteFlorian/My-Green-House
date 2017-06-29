@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" ng-app="MyDemoApp">
+<html lang="en">
+
+<head>
+    <title>Test API AngularJS</title>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <script type="text/javascript" src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+    <script type="text/javascript" src="https://ajax.aspnetcdn.com/ajax/signalr/jquery.signalr-2.2.1.min.js"></script>
+    <script type="text/javascript" src="https://cdn.myconstellation.io/js/Constellation-1.8.1.min.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.7/angular.min.js"></script>
+    <script type="text/javascript" src="https://cdn.myconstellation.io/js/ngConstellation-1.8.1.min.js"></script>
+	<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+	<link rel="stylesheet" media="screen" type="text/css" title="projet html" href="Web.CSS"/>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1"
+</head>
+
+<script>
+        var myDemoApp = angular.module('MyDemoApp', ['ngConstellation']);
+        myDemoApp.controller('MyController', ['$scope',  'constellationConsumer', function ($scope, constellation) {
+            constellation.initializeClient("http://localhost:8088", "123", "test1");
+			
+			$scope.Plante = {};
+			$scope.LastId = "-1";
+			$scope.PlanteNom = {};
+			$scope.Query = {};
+			$scope.TabUrl={};
+						
+			function sleep(milliseconds){
+			var start = new Date().getTime();
+				for(var i = 0;i<1e7;i++)
+				{
+					if((new Date().getTime() - start)>milliseconds)
+					{
+						break;
+					}
+				}
+			}
+			
+			$scope.getNomPlante = function(){  <!-- Prend les nom dans la BDD pour les afficher dans le menu déroulant -->
+				constellation.sendMessageWithSaga({ Scope: 'Package', Args: ['MySQL'] }, 'Select_DB', [ 'plante', 'Id,nom' ], function(response) {
+					$scope.PlanteNom = response.Data;
+					$scope.$apply();
+				});
+			};
+			
+			
+			$scope.reset = function(){
+				$scope.enter_image = "";
+				$scope.enter_lum ="";
+				$scope.enter_temp = "";
+				$scope.enter_hum = "";
+				$scope.enter_bes_eau = "";
+				$scope.enter_matur = "";
+			};
+			
+			$scope.add_enteredPlante = function(LastId,enter_nom,enter_position_x,enter_position_y,enter_effectif,enter_image,enter_lum,enter_temp,enter_hum,enter_bes_eau,enter_matur){  
+			<!-- Ajoute une plante existante cad ajoute une entré dans la table serre -->
+				$scope.query = "(" + LastId + ",'" + enter_nom + "'";
+				$scope.table = 'plante(Id,nom';
+				if (enter_image!=""){$scope.query += ",'" + enter_image + "'";
+				$scope.table +=',url';}
+				if (enter_lum!=""){$scope.query += "," + enter_lum.toString();
+				$scope.table +=',seuil_lum';}
+				if (enter_temp!=""){$scope.query += "," + enter_temp.toString();
+				$scope.table +=',temp';}
+				if (enter_hum!=""){$scope.query += "," + enter_hum.toString();
+				$scope.table +=',humidite';}
+				if (enter_bes_eau!=-""){$scope.query += "," + enter_bes_eau.toString();
+				$scope.table +=',besoin_eau';}
+				if (enter_matur!=""){$scope.query += "," + enter_matur.toString();
+				$scope.table +=',maturation';} <!-- on évalue les caractère vides et on compose la requetes au fur et à mesure -->
+				$scope.query += ")";
+				$scope.table +=')';
+				
+				constellation.sendMessage({ Scope: 'Package', Args: ['MySQL'] }, 'Insert_DB', [ $scope.table , $scope.query ]); <!-- on insere dans la table plante -->
+				sleep(200);
+				$scope.query = "(" + LastId + "," + enter_position_x.toString() + "," + enter_position_y.toString() + "," + enter_effectif.toString() + ")"; <!--conposition de la nouvelle requete-->
+				constellation.sendMessage({ Scope: 'Package', Args: ['MySQL'] }, 'Insert_DB', [ 'serre(Id,position_x,position_y,effectif)', $scope.query ]);<!-- insertion dans la table serre -->
+				sleep(200);
+				constellation.sendMessage({ Scope: 'Package', Args: ['Simu_State_Object'] }, 'Maj_SerreAsync', {}, function(response) {}); <!--Mise à jour du state object Serre -->
+			};
+			
+			$scope.add_SelectedPlante = function(PlanteNom,select_nom,select_position_x,select_position_y,select_nbr_plants){  <!-- Ajoute une plante existante cad ajoute une entré dans la table serre ->
+				for (i = 0; i < PlanteNom[1].length; i++) 
+				{ 
+					if (select_nom==PlanteNom[1][i])  <!-- On retrouve l'Id de la plante selectionnée -->
+					{
+						$scope.Id = PlanteNom[0][i];
+					}
+				}
+				$scope.query = "(" + $scope.Id + "," + select_position_x.toString() + "," + select_position_y.toString() + "," + select_nbr_plants.toString() + ")" <!-- regroupement pour former la requete d'insertion dans la serre-->
+				constellation.sendMessage({ Scope: 'Package', Args: ['MySQL'] }, 'Insert_DB', [ 'serre(Id,position_x,position_y,effectif)', $scope.query ]); <!-- ON plante la selection -->
+				sleep(200); <!--Pour eviter les soucis de Async -->
+				constellation.sendMessage({ Scope: 'Package', Args: ['Simu_State_Object'] }, 'Maj_SerreAsync', {}, function(response) {}); <!--On met à jour le State Object Serre -->
+			};
+			
+			$scope.delete_serre = function(position_x_del,position_y_del){
+			$scope.query= "position_x="+position_x_del.toString()+" and position_y="+position_y_del.toString();
+				constellation.sendMessage({ Scope: 'Package', Args: ['MySQL'] }, 'Delete_DB', [ 'serre', $scope.query ]);
+				sleep(200);
+				constellation.sendMessage({ Scope: 'Package', Args: ['Simu_State_Object'] }, 'Maj_SerreAsync', {}, function(response) {});
+			};
+					
+            constellation.onConnectionStateChanged(function (change) {
+                if (change.newState === $.signalR.connectionState.connected) {
+                    console.log("Connecté");
+                    $scope.isConnected = true;
+					
+					constellation.sendMessage({ Scope: 'Package', Args: ['Simu_State_Object'] }, 'Maj_SerreAsync', {}, function(response) {}); <!-- Maj du StateObject Serre au lancement de la page -->
+					constellation.registerStateObjectLink("*", "Simu_State_Object", "Serre", "*", function (so) {
+                        $scope.Plante = so.Value.Plante;
+						$scope.LastId = so.Value.LastId;
+						$scope.TabUrl = so.Value.tab_url;
+                        $scope.$apply();
+                    });
+					
+                }
+                else {
+                    $scope.isConnected = false;
+                }
+                $scope.$apply();
+                });
+            constellation.connect();
+        }]);
+</script>
+
+<body ng-controller="MyController">
+
+	<nav class="navbar navbar-inverse">
+		<div class="container-fluid">
+			<div class="navbar-header">
+				<a class="navbar-brand" href="#">My Green House</a>
+			</div>
+		<ul class="nav navbar-nav">
+			<li><a href="C:\Users\ISEN\Desktop\web test\Web Final\Accueil.html">Dashboard</a></li>
+			<li><a class ="active" href="#2a">Pour les plantes</a></li>
+			<li><a href="C:\Users\ISEN\Desktop\web test\Web Final\BDD edit.html">La BDD</a></li>
+			<!-- voilà la ligne a remetttre sur toutes les autres pages pour que la navbar fonctionne bien
+				<li><a href="C:\Users\thibaultPc\Desktop\Projet html\Web_3.html">La BDD</a></li>
+			avec vos noms de dossier bien évidement -->
+		</ul>
+		</div>
+	</nav>
+
+	<div class="container">
+		<div class="row">
+			<div class="col-lg-4">
+				<button type="button" class="btn btn-success btn-md" ng-click="getNomPlante()" data-toggle="modal" data-target="#myModal1">Ajouter une plante de la base de données</button>
+				<div class="modal fade" id="myModal1" role="dialog">
+					<div class="modal-dialog">
+						<div class="modal-content">
+							<div class="modal-header">
+								<button type="button" class="close" data-dismiss="modal">&times;</button>
+								<h4 class="modal-title" ><strong>Sélection de la plante</strong></h4>
+							</div>
+							<div class="modal-body">
+								<p><u>Veuillez entrer les caractéristiques de la plante :</u></p>
+								<label>Nom :
+									<div class="form-group">
+										<select class="form-control" id="sel1" ng-model="select_nom">
+											<option ng-repeat="h in PlanteNom[1]">{{h}}</option>
+										</select>
+									</div>	
+								</label>
+								<label>Position dans la serre :
+									<input type="number" class="form-control" name="pos_x2" placeholder="ligne" required ng-model="select_position_x">
+									<input type="number" class="form-control" name="pos_y2" placeholder="colonne" required ng-model="select_position_y">
+								</label>
+								<label>Nombre de plants :<input type="number" class="form-control" name="nbr" placeholder="ex : 30"required ng-model="select_nbr_plants"></label>
+							</div>
+							<div class="modal-footer">
+								<button type="button" class="btn btn-default" data-dismiss="modal" ng-click="add_SelectedPlante(PlanteNom,select_nom,select_position_x,select_position_y,select_nbr_plants)">Valider</button>
+								<button type="button" class="btn btn-default" data-dismiss="modal">Fermer</button>
+							</div>
+						</div>
+					</div>
+				</div>
+				<p><br /></p>
+				<button type="button" class="btn btn-success btn-md" data-toggle="modal" data-target="#myModal" ng-click="reset()">Ajouter un nouveau type de plante<br /></button>
+				<div class="modal fade" id="myModal" role="dialog">
+					<div class="modal-dialog">
+						<div class="modal-content">
+							<div class="modal-header">
+								<button type="button" class="close" data-dismiss="modal">&times;</button>
+								<h4 class="modal-title" ><strong>Caractéristiques</strong></h4>
+							</div>
+							<div class="modal-body">
+								<p><u>Veuillez entrer les caractéristiques de la plante :</u></p>
+								<label>Nom :<input type="text" class="form-control" name="nom" placeholder="ex : tomates" required ng-model="enter_nom" value=""></label>
+								<label>Position dans la serre :<input type="number" class="form-control" name="pos_x" placeholder="ligne" required ng-model="enter_position_x"><input type="number" class="form-control" name="pos_y" placeholder="colonne" required ng-model="enter_position_y"></label>
+								<label>Nombre de plants :<input type="number" class="form-control" name="nbr" placeholder="ex : 30" required ng-model="enter_effectif"></label>
+								<label>Image (Optionnel) :<input type="texte" name="nom" ng-model="enter_image" /></label>
+								<p><u>Maintenant les détails nécessaires à la pousse :</u></p>
+								<label>Luminosité (Lux) (Optionnel) :<input type="number" class="form-control" name="lum" ng-model="enter_lum"></label>
+								<label>Température (°C) (Optionnel) :<input type="number" class="form-control" name="temp" ng-model="enter_temp"></label>
+								<label>Humidité (%) (Optionnel) :<input type="number" class="form-control" name="hum" ng-model="enter_hum"></label>
+								<label>Besoin en eau (L) (Optionnel) :<input type="number" class="form-control" name="eau" ng-model="enter_bes_eau"></label>
+								<label>Maturation (Jours) (Optionnel) :<input type="number" class="form-control" name="mat" ng-model="enter_matur"></label>
+							</div>
+							<div class="modal-footer">
+								<button type="button" class="btn btn-default" data-dismiss="modal" ng-click="add_enteredPlante(LastId,enter_nom,enter_position_x,enter_position_y,enter_effectif,enter_image,enter_lum,enter_temp,enter_hum,enter_bes_eau,enter_matur)">Valider</button>
+								<button type="button" class="btn btn-default" data-dismiss="modal">Fermer</button>
+							</div>
+						</div>
+					</div>
+				</div>
+				<p><br /></p>
+				<button type="button" class="btn btn-success btn-md" data-toggle="modal" data-target="#myModal2">Supprimer une plante de la serre</button>
+				<div class="modal fade" id="myModal2" role="dialog">
+					<div class="modal-dialog">
+						<div class="modal-content">
+							<div class="modal-header">
+								<button type="button" class="close" data-dismiss="modal">&times;</button>
+								<h4 class="modal-title" ><strong>Sélection de la plante à supprimer</strong></h4>
+							</div>
+							<div class="modal-body">
+								<p><u>Veuillez entrer la position dans la serre :</u></p>
+								<label>Position :
+									<input type="number" class="form-control" name="pos_x1" placeholder="ligne" required ng-model="position_x_del">
+									<input type="number" class="form-control" name="pos_y1" placeholder="colonne" required ng-model="position_y_del">
+								</label>
+							</div>
+							<div class="modal-footer">
+								<button type="button" class="btn btn-default" data-dismiss="modal" ng-click="delete_serre(position_x_del,position_y_del)">Valider</button>
+								<button type="button" class="btn btn-default" data-dismiss="modal">Fermer</button>
+							</div>
+						</div>
+					</div>
+				</div>
+				<p><br /></p>
+			</div>
+			<div class="col-lg-8">
+				<div class="kpi">
+					<div class="kpi-title">Votre serre</div>
+				</div>
+				<div class="row-same-height row-full-height">
+					<div class="col-xs-3 col-xs-height col-full-height"><div class="item"><div class="content"><img src="{{TabUrl[0]}}" alt="..." class="img-thumbnail"><br /><img src="{{TabUrl[1]}}" alt="..." class="img-thumbnail"><br /><img src="{{TabUrl[2]}}" alt="..." class="img-thumbnail"><br /><img src="{{TabUrl[3]}}" alt="..." class="img-thumbnail"><br /><img src="{{TabUrl[4]}}" alt="..." class="img-thumbnail"></div></div></div>
+					<div class="col-xs-3 col-xs-height col-full-height"><div class="item"><div class="content"><img src="{{TabUrl[5]}}" alt="..." class="img-thumbnail"><br /><img src="{{TabUrl[6]}}" alt="..." class="img-thumbnail"><br /><img src="{{TabUrl[7]}}" alt="..." class="img-thumbnail"><br /><img src="{{TabUrl[8]}}" alt="..." class="img-thumbnail"><br /><img src="{{TabUrl[9]}}" alt="..." class="img-thumbnail"></div></div></div>
+					<div class="col-xs-3 col-xs-height col-full-height"><div class="item"><div class="content"><img src="{{TabUrl[10]}}" alt="..." class="img-thumbnail"><br /><img src="{{TabUrl[11]}}" alt="..." class="img-thumbnail"><br /><img src="{{TabUrl[12]}}" alt="..." class="img-thumbnail"><br /><img src="{{TabUrl[13]}}" alt="..." class="img-thumbnail"><br /><img src="{{TabUrl[14]}}" alt="..." class="img-thumbnail"></div></div></div>
+					<div class="col-xs-3 col-xs-height col-full-height"><div class="item"><div class="content"><img src="{{TabUrl[15]}}" alt="..." class="img-thumbnail"><br /><img src="{{TabUrl[16]}}" alt="..." class="img-thumbnail"><br /><img src="{{TabUrl[17]}}" alt="..." class="img-thumbnail"><br /><img src="{{TabUrl[18]}}" alt="..." class="img-thumbnail"><br /><img src="{{TabUrl[19]}}" alt="..." class="img-thumbnail"></div></div></div>
+			    </div>
+			</div>
+	</div>
+</body>
+
+</html>

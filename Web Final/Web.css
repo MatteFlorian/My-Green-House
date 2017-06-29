@@ -1,0 +1,61 @@
+
+.container {
+  padding-right: 150px;
+  padding-left: 150px;
+  margin-right: auto;
+  margin-left: auto;
+  width :780px;
+  height:720px;
+}
+
+.container2 {
+  padding-right: auto;
+  padding-left: auto;
+  margin-left: auto;
+}
+
+.container2 {
+ background-color:#000000;
+}
+
+
+
+.row {
+  margin-right: -320px;
+  margin-left: -320px;
+}
+
+body {
+  padding-top: 10px;
+  background-color:#000000
+}
+
+
+[class*="col-"], footer{
+  background-color: #898E8A;
+  border: 1px solid black;
+  border-radius: 0px;
+  line-height: 40px;
+  text-align: center;
+}
+
+.kpi-title {
+ font-size : 2em;
+ font-weight : 500;
+ color : #00690B ;
+}
+
+.kpi-value {
+	font-size : 1em;
+	font-weight : 400;
+    color : #22ED44 ;
+}
+
+.modal-dialog {
+	width: 550px;
+	height: 5px;
+}
+
+.form-control {
+	width : 150px;
+}

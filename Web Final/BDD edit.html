@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" ng-app="MyDemoApp">
+<html lang="en">
+
+<head>
+    <title>Ma serre connectée</title>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <script type="text/javascript" src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+    <script type="text/javascript" src="https://ajax.aspnetcdn.com/ajax/signalr/jquery.signalr-2.2.1.min.js"></script>
+    <script type="text/javascript" src="https://cdn.myconstellation.io/js/Constellation-1.8.1.min.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.7/angular.min.js"></script>
+    <script type="text/javascript" src="https://cdn.myconstellation.io/js/ngConstellation-1.8.1.min.js"></script>
+	<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+	<link rel="stylesheet" media="screen" type="text/css" title="Projet html" href="Web.CSS"/>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+   
+
+<script>
+        var myDemoApp = angular.module('MyDemoApp', ['ngConstellation']);
+        myDemoApp.controller('MyController', ['$scope',  'constellationConsumer', function ($scope, constellation) {
+            constellation.initializeClient("http://localhost:8088", "123", "test1");
+			
+			function sleep(milliseconds){
+			var start = new Date().getTime();
+				for(var i = 0;i<1e7;i++)
+				{
+					if((new Date().getTime() - start)>milliseconds)
+					{
+						break;
+					}
+				}
+			}
+			
+			$scope.Database_Plante = {};
+			<!--Fonction inutile qui permet de seectinner la table plante en intégralitée--->
+			$scope.getDatabase_Plante = function(){
+				constellation.sendMessageWithSaga({ Scope: 'Package', Args: ['MySQL'] }, 'Select_DB', [ 'plante', 'Id,nom,url,seuil_lum,temp,humidite,besoin_eau,maturation' ], function(response) {
+				$scope.Database_Plante = response.Data;
+				});
+			};
+			
+			$scope.reset = function(){
+				$scope.up_nom = "";
+				$scope.up_url = "";
+				$scope.up_lum ="";
+				$scope.up_temp = "";
+				$scope.up_hum = "";
+				$scope.up_bes_eau = "";
+				$scope.up_matur = "";
+			};
+			
+			$scope.update_DB = function(Database_Plante,selected_plante,up_nom,up_url,up_lum,up_temp,up_hum,up_bes_eau,up_matur){
+			<!-- on retrouve l'Id de la plante à modifier-->
+				$scope.Id = {};
+				for (i = 0; i < Database_Plante.length; i++) 
+				{ 
+					if (selected_plante==Database_Plante[i].nom) 
+					{
+						$scope.Id = Database_Plante[i].Id;
+					}
+				}
+			
+				$scope.query = "Id="+$scope.Id ;
+				if (up_nom!=""){$scope.query += ",nom='" + up_nom + "'";}
+				if (up_url!=""){$scope.query += ",url='" + up_url + "'";}
+				if (up_lum!=""){$scope.query += ",seuil_lum=" + up_lum.toString();}
+				if (up_temp!=""){$scope.query += ",temp=" + up_temp.toString();}
+				if (up_hum!=""){$scope.query += ",humidite=" + up_hum.toString();}
+				if (up_bes_eau!=""){$scope.query += ",besoin_eau=" + up_bes_eau.toString();}
+				if (up_matur!=""){$scope.query += ",maturation=" + up_matur.toString();}
+				
+				sleep(200);
+				constellation.sendMessage({ Scope: 'Package', Args: ['MySQL'] }, 'Update_DB', [ "plante", $scope.query, "Id=" + $scope.Id ]);
+				sleep(200);
+				constellation.sendMessage({ Scope: 'Package', Args: ['Simu_State_Object'] }, 'Maj_SerreAsync', {}, function(response) {});
+			};
+			
+			$scope.delete_DB = function(Database_Plante,selected_plante,LastId){
+				$scope.Id = {};
+				for (i = 0; i < Database_Plante.length; i++) 
+				{ 
+					if (selected_plante==Database_Plante[i].nom) 
+					{
+						$scope.Id = Database_Plante[i].Id;
+					}
+				}
+				
+				constellation.sendMessage({ Scope: 'Package', Args: ['MySQL'] }, 'Delete_DB', [ "serre", "Id=" + $scope.Id ]);
+				sleep(200);
+				constellation.sendMessage({ Scope: 'Package', Args: ['MySQL'] }, 'Delete_DB', [ "plante", "Id=" + $scope.Id ]);
+					for (i=Number($scope.Id) +1;i<LastId;i++)
+					{
+						constellation.sendMessage({ Scope: 'Package', Args: ['MySQL'] }, 'Update_DB', [ "serre", "Id="+(i-1).toString(), "Id=" + i.toString() ]);
+						sleep(200);
+						constellation.sendMessage({ Scope: 'Package', Args: ['MySQL'] }, 'Update_DB', [ "plante", "Id="+(i-1).toString(), "Id=" + i.toString() ]);
+					}
+			};
+			
+            constellation.onConnectionStateChanged(function (change) {
+                if (change.newState === $.signalR.connectionState.connected) {
+                    console.log("Connecté");
+                    $scope.isConnected = true;
+					
+					constellation.sendMessage({ Scope: 'Package', Args: ['Simu_State_Object'] }, 'Maj_SerreAsync', {}, function(response) {}); <!-- Maj du StateObject Serre au lancement de la page -->
+					constellation.registerStateObjectLink("*", "Simu_State_Object", "Serre", "*", function (so) {
+                        $scope.Plante = so.Value.Plante;
+						$scope.LastId = so.Value.LastId;
+						$scope.Database_Plante = so.Value.data;
+                        $scope.$apply();
+                    });
+                }
+                else {
+                    $scope.isConnected = false;
+                }
+                $scope.$apply();
+                });
+            constellation.connect();
+        }]);
+</script>
+   
+<body ng-controller="MyController">
+	<nav class="navbar navbar-inverse">
+		<div class="container-fluid">
+			<div class="navbar-header">
+				<a class="navbar-brand" href="#">My Green House</a>
+			</div>
+		<ul class="nav navbar-nav">
+			<li><a href="C:\Users\ISEN\Desktop\web test\Web Final\Accueil.html">Dashboard</a></li>
+			<li><a href="C:\Users\ISEN\Desktop\web test\Web Final\Serre.html">Pour les plantes</a></li>
+			<li class="active"><a href="#2a">La BDD</a></li>
+			<!-- voilà la ligne a remetttre sur toutes les autres pages pour que la navbar fonctionne bien
+				<li><a href="C:\Users\thibaultPc\Desktop\Projet html\Web_3.html">La BDD</a></li>
+			avec vos noms de dossier bien évidement -->
+		</ul>
+		</div>
+	</nav>
+	
+	
+	<div class="container">
+		<div class="row">
+			<div class="col-lg-4">
+			</br>
+				<div class="form-group">
+					<select class="form-control" id="sel1" ng-model="selected_plante">
+						<option ng-repeat = "h in Database_Plante">{{h.nom}}</option>
+					</select>
+				</div>
+				<button type="button" class="btn btn-success btn-md" data-toggle="modal" data-target="#myModal1" ng-click="reset()">Editer</button>
+				<div class="modal fade" id="myModal1" role="dialog">
+					<div class="modal-dialog">
+						<div class="modal-content">
+							<div class="modal-header">
+								<button type="button" class="close" data-dismiss="modal">&times;</button>
+								<h4 class="modal-title" ng-click="reset()"><strong>Modifier la BDD</strong></h4>
+							</div>
+							<div class="modal-body">
+								<label>nom:</label>
+								<input type="string" name="pos" size="20" required ng-model="up_nom">
+								<br />
+								<label>url:</label>
+								<input type="string" name="pos" size="20" required ng-model="up_url">
+								<br />
+								<label>seuil de luminosité:</label>
+								<input type="number" name="pos" size="3" required ng-model="up_lum">
+								<br />
+								<label>température:</label>
+								<input type="number" name="nbr" size="3" required ng-model="up_temp">
+								<br />
+								<label>humidité:</label>
+								<input type="number" name="nbr" size="3" required ng-model="up_hum"> 
+								<br />
+								<label>besoin en eau:</label>
+								<input type="number" name="nbr" size="3" required ng-model="up_bes_eau">
+								<br />
+								<label>maturation:</label>
+								<input type="number" name="nbr" size="3" required ng-model="up_matur">
+								
+							</div>
+							<div class="modal-footer">
+								<button type="button" class="btn btn-default" data-dismiss="modal" ng-click="update_DB(Database_Plante,selected_plante,up_nom,up_url,up_lum,up_temp,up_hum,up_bes_eau,up_matur)">Valider</button>
+								<button type="button" class="btn btn-default" data-dismiss="modal">Fermer</button>
+							</div>
+						</div>
+					</div>
+				</div>
+				<br />
+				<button type="button" class="btn btn-success btn-md" data-toggle="modal" data-target="#myModal2">Supprimer</button>
+				<div class="modal fade" id="myModal2" role="dialog">
+					<div class="modal-dialog">
+						<div class="modal-content">
+							<div class="modal-header">
+								<button type="button" class="close" data-dismiss="modal">&times;</button>
+								<h4 class="modal-title"><strong>Suprimmer BDD</strong></h4>
+							</div>
+							<p>Etes vous sur de vouloir supprimer {{selected_plante}} ?</p>
+							<div class="modal-footer">
+								<button type="button" class="btn btn-default" data-dismiss="modal" ng-click="delete_DB(Database_Plante,selected_plante,LastId)">Valider</button>
+								<button type="button" class="btn btn-default" data-dismiss="modal">Fermer</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="col-lg-8">
+				<table class="table table-bordered">
+					<thead>
+						<tr>
+						  <th>id</th>
+						  <th>nom</th>
+						  <th>url</th>
+						  <th>seuil_lum</th>
+						  <th>temp</th>
+						  <th>humidite</th>
+						  <th>besoin_eau</th>
+						  <th>maturation</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr ng-repeat = "h in Database_Plante">
+						  <th><div style="width:73px;height:40px;overflow:auto;">{{h.Id}}</div></th>
+						  <td><div style="width:73px;height:40px;overflow:auto;">{{h.nom}}</div></td>
+						  <td><div style="width:73px;height:40px;overflow:auto;">{{h.url}}</div></td>
+						  <td><div style="width:73px;height:40px;overflow:auto;">{{h.seuil_lum}}</div></td>
+						  <td><div style="width:73px;height:40px;overflow:auto;">{{h.temp}}</div></td>
+						  <td><div style="width:73px;height:40px;overflow:auto;">{{h.humidite}}</div></td>
+						  <td><div style="width:73px;height:40px;overflow:auto;">{{h.besoin_eau}}</div></td>
+						  <td><div style="width:73px;height:40px;overflow:auto;">{{h.maturation}}</div></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+			
+			
+	</div>
+</body>
+</html>

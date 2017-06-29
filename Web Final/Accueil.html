@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" ng-app="MyDemoApp">
+<html lang="en">
+
+<head>
+    <title>Ma serre connectée</title>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <script type="text/javascript" src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+    <script type="text/javascript" src="https://ajax.aspnetcdn.com/ajax/signalr/jquery.signalr-2.2.1.min.js"></script>
+    <script type="text/javascript" src="https://cdn.myconstellation.io/js/Constellation-1.8.1.min.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.7/angular.min.js"></script>
+    <script type="text/javascript" src="https://cdn.myconstellation.io/js/ngConstellation-1.8.1.min.js"></script>
+	<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+	<link rel="stylesheet" media="screen" type="text/css" title="projet html" href="Web.CSS"/>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+   
+<script>
+	var myDemoApp = angular.module('MyDemoApp', ['ngConstellation']);
+	myDemoApp.controller('MyController', ['$scope',  'constellationConsumer', function ($scope, constellation) {
+		constellation.initializeClient("http://localhost:8088", "123", "Accueil");
+		$scope.hum = {};
+		$scope.temp = {};
+		$scope.niv_eau = {};
+		$scope.lumi = {};
+		$scope.meteo = {};
+		
+		constellation.onConnectionStateChanged(function (change) {
+			if (change.newState === $.signalR.connectionState.connected) {
+				console.log("Connecté");
+				constellation.registerStateObjectLink("*", "Simu_State_Object", "Résultats Capteurs", "*", function (so) {
+					$scope.temp = so.Value.Température;
+					$scope.hum = so.Value.Humidité;
+					$scope.niv_eau = so.Value.Niveau_eau;
+					$scope.lumi = so.Value.Luminosité;
+					$scope.$apply();
+				});
+				
+				constellation.registerStateObjectLink("*","ForecastIO","Lille","*", function(so){
+					$scope.meteo=so.Value.minutely.summary;
+				});
+				$scope.isConnected = true;
+			}
+			else {
+				$scope.isConnected = false;
+			}
+			$scope.$apply();
+			});
+		constellation.connect();
+	}]);
+	
+	
+</script>
+
+<body ng-controller="MyController">
+
+	<nav class="navbar navbar-inverse">
+		<div class="container-fluid">
+			<div class="navbar-header">
+				<a class="navbar-brand" href="#">My Green House</a>
+			</div>
+		<ul class="nav navbar-nav">
+			<li class="active"><a href="#2a">Dashboard</a></li>
+			<li><a href="C:\Users\ISEN\Desktop\web test\Web Final\Serre.html">Pour les plantes</a></li>
+			<li><a href="C:\Users\ISEN\Desktop\web test\Web Final\BDD edit.html">La BDD</a></li>
+		</ul>
+		</div>
+	</nav>
+	
+	
+	<div class="container">
+		<div class="row">
+			<div class="col-lg-12">
+				<div class="kpi-title">Météo</div>
+				<div class="kpi-value">{{meteo}}</div>
+			</div>
+		</div>
+		<div class="row">
+			<div class ="col-lg-3">
+				<div class="kpi">
+					<div class="kpi-title">{{niv_eau.Name}}</div>
+					<div class="kpi-value">{{niv_eau.Value}} {{niv_eau.Unit}}</div>
+					<div class="progress">
+						<div class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="{{niv_eau.Value}}" aria-valuemin="0" aria-valuemax="100" style="width: {{niv_eau.Value}}%;">
+						{{niv_eau.Value}} {{niv_eau.Unit}}
+						</div>
+					</div>
+				</div>
+			</div>		
+			<div class ="col-lg-3">
+				<div class="kpi">
+					<div class="kpi-title">{{temp.Name}}</div>
+					<div class="kpi-value">{{temp.Value}} {{temp.Unit}}</div>
+					<div class="progress">
+						<div class="progress-bar progress-bar-danger" role="progressbar" aria-valuenow="{{temp.Value}}" aria-valuemin="0" aria-valuemax="60" style="width: {{temp.Value}}%;">
+						{{temp.Value}} {{temp.Unit}}
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class ="col-lg-3">
+				<div class="kpi">
+					<div class="kpi-title">{{lumi.Name}}</div>
+					<div class="kpi-value">{{lumi.Value}} {{lumi.Unit}}</div>
+					<div class="progress">
+						<div class="progress-bar progress-bar-warning" role="progressbar" aria-valuenow="{{lumi.Value}}" aria-valuemin="0" aria-valuemax="100" style="width: {{lumi.Value}}%;">
+						{{lumi.Value}} {{lumi.Unit}}
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class ="col-lg-3">
+				<div class="kpi">
+					<div class="kpi-title">{{hum.Name}}</div>
+					<div class="kpi-value">{{hum.Value}} {{hum.Unit}}</div>
+					<div class="progress">
+						<div class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="{{hum.Value}}" aria-valuemin="0" aria-valuemax="100" style="width: {{hum.Value}}%;">
+						{{hum.Value}} {{hum.Unit}}
+						</div>
+					</div>
+				</div>
+			</div>	
+		</div>
+	</div>
+
+</body>
+
+</html>
