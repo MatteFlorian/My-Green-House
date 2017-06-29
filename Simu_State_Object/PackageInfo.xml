@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Package xmlns="http://schemas.myconstellation.io/Constellation/1.8/PackageManifest"
+         Name="Simu_State_Object"
+         Version="1.2"
+         Author="Florian MATTE"
+         URL="http://www.mywebsite.com"
+         Description="Simu_State_Object Copyright ©  2017"
+         EnableControlHub="false">
+  <Compatibility constellationVersion="1.8" dotNetTargetPlatform="net40">
+    <Platforms>
+      <Platform id="Win32NT" isCompliant="true" />
+      <Platform id="Unix" isCompliant="true" />
+    </Platforms>
+  </Compatibility>
+  <Settings>
+    <Setting name="Interval" type="Int32" defaultValue="1000" description="Intervale d'actualisation des paramètres de la serre" />
+    <Setting name="max_x" type="Int32" defaultValue="5" description="La serre est de la forme max_x * max_y" />
+    <Setting name="max_y" type="Int32" defaultValue="5" description="La serre est de la forme max_x * max_y" />
+    <Setting name="default_picture" type="String" defaultValue="C:/Users/ISEN/Desktop/Database/terre.jpg" description="Chemin de l'image en 250*250 pour les secteurs sans plants" />
+  </Settings>
+</Package>

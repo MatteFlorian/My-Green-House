@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Package xmlns="http://schemas.myconstellation.io/Constellation/1.8/PackageManifest"
+         Name="MySQL"
+         Version="1.1"
+         Author="Florian Matte"
+         URL="https://github.com/MatteFlorian/Constellation_MATTE_Florian"
+         Description="Send request to your MySQL server !"
+         Icon ="mysql.png"
+
+         EnableControlHub="false">
+  <Compatibility constellationVersion="1.8" dotNetTargetPlatform="net40">
+    <Platforms>
+      <Platform id="Win32NT" isCompliant="true" />
+      <Platform id="Unix" isCompliant="true" />
+    </Platforms>
+  </Compatibility>
+  <Settings>
+    <Setting name="server_name" type='String' defaultValue="localhost" description="MySQL server adress" />
+    <Setting name="database_name" type='String' defaultValue="serre_constellation" description="name of the database on your MySQL server" />
+    <Setting name="username" type='String' defaultValue="Visual" description="User you wish constellation to use" />
+    <Setting name="password" type='String' defaultValue="Visual_Studio" description="Password wich is associated to the user" />
+  </Settings>
+</Package>
